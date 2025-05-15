@@ -53,13 +53,23 @@ public class UsersServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-        // Handle user deletion
         String pathInfo = request.getPathInfo();
-        if (pathInfo == null || !pathInfo.startsWith("/delete/")) {
+        if (pathInfo == null) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid request path");
             return;
         }
 
+        if (pathInfo.startsWith("/delete/")) {
+            handleDeleteUser(request, response, pathInfo);
+        } else if (pathInfo.startsWith("/reset-password/")) {
+            handlePasswordReset(request, response, pathInfo);
+        } else {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid request path");
+        }
+    }
+
+    private void handleDeleteUser(HttpServletRequest request, HttpServletResponse response, String pathInfo) 
+            throws ServletException, IOException {
         String userId = pathInfo.substring("/delete/".length());
 
         try {
@@ -80,6 +90,52 @@ public class UsersServlet extends HttpServlet {
                 response.sendRedirect(request.getContextPath() + "/users");
             } else {
                 throw new Exception(message != null ? message : "Failed to delete user");
+            }
+        } catch (Exception e) {
+            if (e.getMessage().equals(AppHelper.ERROR_NETWORK)) {
+                request.getSession().setAttribute("error", AppHelper.ERROR_NETWORK);
+                response.sendRedirect(request.getContextPath() + "/login");
+                return;
+            }
+            request.setAttribute("error", e.getMessage());
+            request.getRequestDispatcher("/WEB-INF/users.jsp").forward(request, response);
+        }
+    }
+
+    private void handlePasswordReset(HttpServletRequest request, HttpServletResponse response, String pathInfo) 
+            throws ServletException, IOException {
+        String userId = pathInfo.substring("/reset-password/".length());
+
+        try {
+            // Get user details from the request
+            User user = new User();
+            user.setId(Long.parseLong(userId));
+            user.setUsername(request.getParameter("username"));
+            user.setEmail(request.getParameter("email"));
+            user.setRole(request.getParameter("role"));
+            user.setVerified(Boolean.parseBoolean(request.getParameter("verified")));
+            
+            // Make password reset request to API
+            String apiResponse = ApiController.makePostRequest(
+                AppHelper.PASSWORD_RESET_ENDPOINT, 
+                JsonUtil.toJson(user), 
+                request.getSession()
+            );
+
+            if (apiResponse == null || apiResponse.contains("401") || apiResponse.contains("403")) {
+                request.getSession().setAttribute("error", AppHelper.ERROR_UNAUTHORIZED);
+                response.sendRedirect(request.getContextPath() + "/login");
+                return;
+            }
+
+            // Check response
+            String message = JsonUtil.getFieldAsString(apiResponse, "message");
+            if (message != null && message.contains("sent")) {
+                // Set success message and redirect back to users page
+                request.getSession().setAttribute("success", "Password reset email sent successfully");
+                response.sendRedirect(request.getContextPath() + "/users");
+            } else {
+                throw new Exception(message != null ? message : "Failed to send password reset email");
             }
         } catch (Exception e) {
             if (e.getMessage().equals(AppHelper.ERROR_NETWORK)) {

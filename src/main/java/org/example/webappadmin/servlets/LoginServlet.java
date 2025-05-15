@@ -59,6 +59,8 @@ public class LoginServlet extends HttpServlet {
                 // Check if user is admin
                 if (user != null && "ADMIN".equals(user.getRole())) {
                     HttpSession session = request.getSession();
+                    // Store the token in the session
+                    session.setAttribute("name", user.getUsername());
                     response.sendRedirect(request.getContextPath() + "/users");
                 } else {
                     request.setAttribute("error", AppHelper.ERROR_UNAUTHORIZED);

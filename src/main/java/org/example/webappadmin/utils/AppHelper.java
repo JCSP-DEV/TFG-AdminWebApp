@@ -7,6 +7,7 @@ public class AppHelper {
     // API Endpoints
     public static final String LOGIN_ENDPOINT = BASE_URL + "/auth/login";
     public static final String USERS_ENDPOINT = BASE_URL + "/users";
+    public static final String PASSWORD_RESET_ENDPOINT = BASE_URL + "/users/request-password-reset";
     
     // Headers
     public static final String HEADER_CONTENT_TYPE = "Content-Type";

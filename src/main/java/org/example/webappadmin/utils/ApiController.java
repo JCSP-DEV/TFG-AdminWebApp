@@ -30,6 +30,7 @@ public class ApiController {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header(HEADER_CONTENT_TYPE, HEADER_APPLICATION_JSON)
+                    .header("Authorization", "Bearer " + session.getAttribute("token"))
                     .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
                     .timeout(TIMEOUT)
                     .build();
@@ -78,6 +79,7 @@ public class ApiController {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header(HEADER_CONTENT_TYPE, HEADER_APPLICATION_JSON)
+                    .header("Authorization", "Bearer " + session.getAttribute("token"))
                     .GET()
                     .timeout(TIMEOUT)
                     .build();
@@ -136,6 +138,7 @@ public class ApiController {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header(HEADER_CONTENT_TYPE, HEADER_APPLICATION_JSON)
+                    .header("Authorization", "Bearer " + session.getAttribute("token"))
                     .method("PATCH", HttpRequest.BodyPublishers.ofString(jsonPayload))
                     .timeout(TIMEOUT)
                     .build();

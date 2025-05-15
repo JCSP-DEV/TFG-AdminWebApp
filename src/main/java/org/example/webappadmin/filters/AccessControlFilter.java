@@ -31,7 +31,7 @@ public class AccessControlFilter implements Filter {
         }
 
         // Check if user is logged in
-        boolean isLoggedIn = (session != null && session.getAttribute("user") != null);
+        boolean isLoggedIn = (session != null && session.getAttribute("name") != null);
 
         if (!isLoggedIn) {
             // Redirect to login page if not logged in
