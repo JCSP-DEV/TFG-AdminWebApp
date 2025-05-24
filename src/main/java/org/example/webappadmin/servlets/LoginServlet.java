@@ -13,13 +13,27 @@ import org.example.webappadmin.utils.JsonUtil;
 
 import java.io.IOException;
 
+/**
+ * Servlet handling user authentication operations.
+ * Supports login with username/email and password.
+ *
+ * @author Juan Carlos
+ */
 @WebServlet(name = "loginServlet", value = "/login")
 public class LoginServlet extends HttpServlet {
 
+    /**
+     * Handles GET requests to display the login form.
+     * Invalidates any existing session before displaying the form.
+     *
+     * @param request the HTTP request
+     * @param response the HTTP response
+     * @throws ServletException if a servlet-specific error occurs
+     * @throws IOException if an I/O error occurs
+     */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         response.setContentType("text/html");
-        // Clear all session attributes
         HttpSession session = request.getSession(false);
         if (session != null) {
             session.invalidate();
@@ -27,14 +41,21 @@ public class LoginServlet extends HttpServlet {
         request.getRequestDispatcher("/WEB-INF/login.jsp").forward(request, response);
     }
 
+    /**
+     * Handles POST requests for user authentication.
+     * Supports login with either username or email.
+     * Redirects to users page on successful admin login.
+     *
+     * @param request the HTTP request containing login credentials
+     * @param response the HTTP response
+     * @throws ServletException if a servlet-specific error occurs
+     * @throws IOException if an I/O error occurs
+     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String usernameOrEmail = request.getParameter("username");
         String password = request.getParameter("password");
-
-
         try {
-            // Create login request payload
             User loginRequest = new User();
             if (usernameOrEmail.contains("@")) {
                 loginRequest.setEmail(usernameOrEmail);
@@ -43,23 +64,17 @@ public class LoginServlet extends HttpServlet {
             }
             loginRequest.setPassword(password);
 
-            // Convert to JSON
             String jsonPayload = JsonUtil.toJson(loginRequest);
 
-            // Make API call
             String apiResponse = ApiController.makePostRequest(AppHelper.LOGIN_ENDPOINT, jsonPayload, request.getSession());
 
-            // Check response
             String message = JsonUtil.getFieldAsString(apiResponse, "message");
 
             if (message != null && message.contains("successful")) {
-                // Get user from response
                 User user = JsonUtil.getFieldAsType(apiResponse, "user", User.class);
 
-                // Check if user is admin
                 if (user != null && "ADMIN".equals(user.getRole())) {
                     HttpSession session = request.getSession();
-                    // Store the token in the session
                     session.setAttribute("name", user.getUsername());
                     response.sendRedirect(request.getContextPath() + "/users");
                 } else {
@@ -67,7 +82,6 @@ public class LoginServlet extends HttpServlet {
                     request.getRequestDispatcher("/WEB-INF/login.jsp").forward(request, response);
                 }
             } else {
-                // Login failed
                 request.setAttribute("error", message != null ? message : AppHelper.ERROR_INVALID_CREDENTIALS);
                 request.getRequestDispatcher("/WEB-INF/login.jsp").forward(request, response);
             }

@@ -11,17 +11,28 @@ import org.example.webappadmin.utils.AppHelper;
 import org.example.webappadmin.utils.JsonUtil;
 
 import java.io.IOException;
-import java.util.logging.Logger;
 
+/**
+ * Servlet handling user creation operations.
+ *
+ * @author Juan Carlos
+ */
 @WebServlet(name = "createUserServlet", value = "/users/create")
 public class CreateUserServlet extends HttpServlet {
-    private static final Logger LOGGER = Logger.getLogger(CreateUserServlet.class.getName());
 
+    /**
+     * Handles GET requests to display the user creation form.
+     * Redirects to login page if unauthorized or network error occurs.
+     *
+     * @param request the HTTP request
+     * @param response the HTTP response
+     * @throws ServletException if a servlet-specific error occurs
+     * @throws IOException if an I/O error occurs
+     */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         try {
-            // Check session using the check-session endpoint
             String apiResponse = ApiController.makeGetRequest(AppHelper.BASE_URL + "/auth/check-session", request.getSession());
             
             if (apiResponse == null || apiResponse.contains("401") || apiResponse.contains("403")) {
@@ -30,7 +41,6 @@ public class CreateUserServlet extends HttpServlet {
                 return;
             }
 
-            // Forward to create.jsp if authenticated
             request.getRequestDispatcher("/WEB-INF/create.jsp").forward(request, response);
             
         } catch (Exception e) {
@@ -44,11 +54,20 @@ public class CreateUserServlet extends HttpServlet {
         }
     }
 
+    /**
+     * Handles POST requests to create a new user.
+     * Redirects to login page if unauthorized or network error occurs.
+     * On success, redirects to the users list page.
+     *
+     * @param request the HTTP request containing user details
+     * @param response the HTTP response
+     * @throws ServletException if a servlet-specific error occurs
+     * @throws IOException if an I/O error occurs
+     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         try {
-            // Create user object from form data
             User user = new User();
             user.setUsername(request.getParameter("username"));
             user.setEmail(request.getParameter("email"));
@@ -56,10 +75,8 @@ public class CreateUserServlet extends HttpServlet {
             user.setRole(request.getParameter("role"));
             user.setVerified(false);
 
-            // Convert user object to JSON
             String jsonPayload = JsonUtil.toJson(user);
 
-            // Make POST request to API
             String apiResponse = ApiController.makePostRequest(
                 AppHelper.USERS_ENDPOINT + "/create", 
                 jsonPayload, 
@@ -72,10 +89,8 @@ public class CreateUserServlet extends HttpServlet {
                 return;
             }
 
-            // Check response
             String message = JsonUtil.getFieldAsString(apiResponse, "message");
             if (message != null && message.contains("successfully")) {
-                // Redirect back to users page
                 response.sendRedirect(request.getContextPath() + "/users");
             } else {
                 throw new Exception(message != null ? message : "Failed to create user");

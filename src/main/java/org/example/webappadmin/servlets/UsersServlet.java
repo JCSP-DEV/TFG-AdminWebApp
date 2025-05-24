@@ -14,17 +14,29 @@ import java.io.IOException;
 import java.util.List;
 import java.util.logging.Logger;
 
+/**
+ * Servlet handling user management operations including listing, deleting, and password reset.
+ *
+ * @author Juan Carlos
+ */
 @WebServlet(name = "usersServlet", value = "/users/*")
 public class UsersServlet extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(UsersServlet.class.getName());
 
+    /**
+     * Handles GET requests to list all users.
+     * Redirects to login page if unauthorized or network error occurs.
+     *
+     * @param request the HTTP request
+     * @param response the HTTP response
+     * @throws ServletException if a servlet-specific error occurs
+     * @throws IOException if an I/O error occurs
+     */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         try {
-            // Get users from API
             String apiResponse = ApiController.makeGetRequest(AppHelper.USERS_ENDPOINT, request.getSession());
-
             if (apiResponse == null || apiResponse.contains("401") || apiResponse.contains("403")) {
                 request.getSession().setAttribute("error", AppHelper.ERROR_UNAUTHORIZED);
                 response.sendRedirect(request.getContextPath() + "/login");
@@ -33,10 +45,8 @@ public class UsersServlet extends HttpServlet {
             
             List<User> users = JsonUtil.fromJsonToList(apiResponse, User.class);
 
-            // Set users in request attribute
             request.setAttribute("users", users);
             
-            // Forward to JSP
             request.getRequestDispatcher("/WEB-INF/users.jsp").forward(request, response);
             
         } catch (Exception e) {
@@ -50,6 +60,15 @@ public class UsersServlet extends HttpServlet {
         }
     }
 
+    /**
+     * Handles POST requests for user management operations.
+     * Supports user deletion and password reset operations.
+     *
+     * @param request the HTTP request
+     * @param response the HTTP response
+     * @throws ServletException if a servlet-specific error occurs
+     * @throws IOException if an I/O error occurs
+     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
@@ -68,12 +87,21 @@ public class UsersServlet extends HttpServlet {
         }
     }
 
+    /**
+     * Handles user deletion requests.
+     * Redirects to login page if unauthorized or network error occurs.
+     *
+     * @param request the HTTP request
+     * @param response the HTTP response
+     * @param pathInfo the path information containing the user ID
+     * @throws ServletException if a servlet-specific error occurs
+     * @throws IOException if an I/O error occurs
+     */
     private void handleDeleteUser(HttpServletRequest request, HttpServletResponse response, String pathInfo) 
             throws ServletException, IOException {
         String userId = pathInfo.substring("/delete/".length());
 
         try {
-            // Make delete request to API
             String deleteUrl = AppHelper.USERS_ENDPOINT + "/delete/" + userId;
             String apiResponse = ApiController.makePostRequest(deleteUrl, "{}", request.getSession());
 
@@ -83,10 +111,8 @@ public class UsersServlet extends HttpServlet {
                 return;
             }
 
-            // Check response
             String message = JsonUtil.getFieldAsString(apiResponse, "message");
             if (message != null && message.contains("successfully")) {
-                // Redirect back to users page
                 response.sendRedirect(request.getContextPath() + "/users");
             } else {
                 throw new Exception(message != null ? message : "Failed to delete user");
@@ -102,12 +128,21 @@ public class UsersServlet extends HttpServlet {
         }
     }
 
+    /**
+     * Handles password reset requests for users.
+     * Redirects to login page if unauthorized or network error occurs.
+     *
+     * @param request the HTTP request
+     * @param response the HTTP response
+     * @param pathInfo the path information containing the user ID
+     * @throws ServletException if a servlet-specific error occurs
+     * @throws IOException if an I/O error occurs
+     */
     private void handlePasswordReset(HttpServletRequest request, HttpServletResponse response, String pathInfo) 
             throws ServletException, IOException {
         String userId = pathInfo.substring("/reset-password/".length());
 
         try {
-            // Get user details from the request
             User user = new User();
             user.setId(Long.parseLong(userId));
             user.setUsername(request.getParameter("username"));
@@ -115,7 +150,6 @@ public class UsersServlet extends HttpServlet {
             user.setRole(request.getParameter("role"));
             user.setVerified(Boolean.parseBoolean(request.getParameter("verified")));
             
-            // Make password reset request to API
             String apiResponse = ApiController.makePostRequest(
                 AppHelper.PASSWORD_RESET_ENDPOINT, 
                 JsonUtil.toJson(user), 
@@ -128,10 +162,8 @@ public class UsersServlet extends HttpServlet {
                 return;
             }
 
-            // Check response
             String message = JsonUtil.getFieldAsString(apiResponse, "message");
             if (message != null && message.contains("sent")) {
-                // Set success message and redirect back to users page
                 request.getSession().setAttribute("success", "Password reset email sent successfully");
                 response.sendRedirect(request.getContextPath() + "/users");
             } else {

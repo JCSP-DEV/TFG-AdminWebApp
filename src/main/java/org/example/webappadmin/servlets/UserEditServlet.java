@@ -14,15 +14,29 @@ import org.example.webappadmin.utils.JsonUtil;
 import java.io.IOException;
 import java.util.logging.Logger;
 
+/**
+ * Servlet handling user editing operations.
+ * Supports loading user data and updating user information.
+ *
+ * @author Juan Carlos
+ */
 @WebServlet("/users/edit/*")
 public class UserEditServlet extends HttpServlet {
     private static final Logger LOGGER = Logger.getLogger(UserEditServlet.class.getName());
 
+    /**
+     * Handles GET requests to load and display user data for editing.
+     * Redirects to login page if unauthorized or network error occurs.
+     *
+     * @param request the HTTP request
+     * @param response the HTTP response
+     * @throws ServletException if a servlet-specific error occurs
+     * @throws IOException if an I/O error occurs
+     */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         HttpSession session = request.getSession();
         
-        // Get user ID from URL
         String pathInfo = request.getPathInfo();
         if (pathInfo == null || pathInfo.equals("/")) {
             response.sendRedirect(request.getContextPath() + "/users");
@@ -33,18 +47,15 @@ public class UserEditServlet extends HttpServlet {
         LOGGER.info("Attempting to load user with ID: " + userId);
 
         try {
-            // Get user data from API
             String apiResponse = ApiController.makeGetRequest(AppHelper.USERS_ENDPOINT + "/" + userId, session);
             LOGGER.info("API Response received: " + apiResponse);
             
-            // Check for unauthorized access
             if (apiResponse.equals("401") || apiResponse.equals("403")) {
                 LOGGER.warning("Unauthorized access attempt for user ID: " + userId);
                 response.sendRedirect(request.getContextPath() + "/login");
                 return;
             }
 
-            // Check if response is empty or invalid
             if (apiResponse == null || apiResponse.trim().isEmpty()) {
                 LOGGER.warning("Empty response received from API for user ID: " + userId);
                 request.setAttribute("error", "No data received from server");
@@ -52,11 +63,9 @@ public class UserEditServlet extends HttpServlet {
                 return;
             }
 
-            // Parse user data
             User user = JsonUtil.fromJson(apiResponse, User.class);
             LOGGER.info("Parsed user data: " + (user != null ? user.toString() : "null"));
             
-            // Validate user data
             if (user == null) {
                 LOGGER.warning("User data is null for ID: " + userId);
                 request.setAttribute("error", "User not found");
@@ -64,7 +73,6 @@ public class UserEditServlet extends HttpServlet {
                 return;
             }
 
-            // Validate user ID
             if (user.getId() == null) {
                 LOGGER.warning("User ID is null for user: " + user.getUsername());
                 request.setAttribute("error", "Invalid user data: ID is missing");
@@ -72,14 +80,12 @@ public class UserEditServlet extends HttpServlet {
                 return;
             }
 
-            // Ensure required fields are not null
             if (user.getUsername() == null) user.setUsername("");
             if (user.getEmail() == null) user.setEmail("");
             if (user.getRole() == null) user.setRole("USER");
             
             request.setAttribute("user", user);
             
-            // Forward to edit page
             request.getRequestDispatcher("/WEB-INF/edit.jsp").forward(request, response);
             
         } catch (Exception e) {
@@ -104,12 +110,21 @@ public class UserEditServlet extends HttpServlet {
         }
     }
 
+    /**
+     * Handles POST requests to update user information.
+     * Redirects to login page if unauthorized or network error occurs.
+     * On success, redirects to the users list page.
+     *
+     * @param request the HTTP request containing updated user details
+     * @param response the HTTP response
+     * @throws ServletException if a servlet-specific error occurs
+     * @throws IOException if an I/O error occurs
+     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         HttpSession session = request.getSession();
         
         try {
-            // Get form data
             String userId = request.getParameter("id");
             String username = request.getParameter("username");
             String email = request.getParameter("email");
@@ -117,7 +132,6 @@ public class UserEditServlet extends HttpServlet {
             String password = request.getParameter("password");
             String verified = request.getParameter("verified");
 
-            // Create User object
             User user = new User();
             user.setId(Long.parseLong(userId));
             user.setUsername(username);
@@ -125,52 +139,43 @@ public class UserEditServlet extends HttpServlet {
             user.setRole(role != null ? role : "USER");
             user.setVerified(verified != null);
             
-            // Only set password if provided
             if (password != null && !password.trim().isEmpty()) {
                 user.setPassword(password);
             }
 
-            // Convert to JSON
             String jsonPayload = JsonUtil.toJson(user);
 
-            // Send update request to API
             String apiResponse = ApiController.makePatchRequest(
                 AppHelper.USERS_ENDPOINT + "/update/" + userId,
                 jsonPayload,
                 session
             );
 
-            // Check for unauthorized access
             if (apiResponse.equals("401") || apiResponse.equals("403")) {
                 response.sendRedirect(request.getContextPath() + "/login");
                 return;
             }
 
-            // Check response message
             String message = JsonUtil.getFieldAsString(apiResponse, "message");
             if (message != null) {
                 if (message.contains("successfully")) {
-                    // Success case
                     response.sendRedirect(request.getContextPath() + "/users");
                     return;
                 } else if (message.contains("already exists")) {
-                    // Handle duplicate username/email
                     request.setAttribute("error", message);
-                    request.setAttribute("user", user); // Keep the form data
+                    request.setAttribute("user", user);
                     request.getRequestDispatcher("/WEB-INF/edit.jsp").forward(request, response);
                     return;
                 } else if (message.contains("Failed to update")) {
-                    // Handle general update failure
                     request.setAttribute("error", "Failed to update user. Please try again.");
-                    request.setAttribute("user", user); // Keep the form data
+                    request.setAttribute("user", user);
                     request.getRequestDispatcher("/WEB-INF/edit.jsp").forward(request, response);
                     return;
                 }
             }
             
-            // Default error case
             request.setAttribute("error", AppHelper.ERROR_SERVER);
-            request.setAttribute("user", user); // Keep the form data
+            request.setAttribute("user", user);
             request.getRequestDispatcher("/WEB-INF/edit.jsp").forward(request, response);
             
         } catch (Exception e) {

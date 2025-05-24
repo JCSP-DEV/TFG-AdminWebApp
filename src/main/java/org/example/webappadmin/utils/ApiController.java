@@ -8,6 +8,11 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.logging.Logger;
 
+/**
+ * Utility class for handling HTTP API requests with session management and error handling.
+ *
+ * @author Juan Carlos
+ */
 public class ApiController {
     private static final Logger LOGGER = Logger.getLogger(ApiController.class.getName());
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
@@ -15,12 +20,20 @@ public class ApiController {
     private static final String HEADER_APPLICATION_JSON = "application/json";
     private static final String SESSION_COOKIE_MANAGER = "cookieManager";
 
+    /**
+     * Makes a POST request to the specified URL with JSON payload and session management.
+     *
+     * @param url the target URL for the POST request
+     * @param jsonPayload the JSON payload to send in the request body
+     * @param session the HTTP session for maintaining cookies and authentication
+     * @return the response body as a string
+     * @throws Exception if there are network issues or server errors
+     */
     public static String makePostRequest(String url, String jsonPayload, HttpSession session) throws Exception {
         try {
             LOGGER.info("Making POST request to: " + url);
             LOGGER.info("Request payload: " + jsonPayload);
 
-            // Get or create CookieManager for this session
             java.net.CookieManager cookieManager = getCookieManager(session);
             HttpClient httpClient = HttpClient.newBuilder()
                     .connectTimeout(TIMEOUT)
@@ -65,11 +78,18 @@ public class ApiController {
         }
     }
 
+    /**
+     * Makes a GET request to the specified URL with session management.
+     *
+     * @param url the target URL for the GET request
+     * @param session the HTTP session for maintaining cookies and authentication
+     * @return the response body as a string
+     * @throws Exception if there are network issues or server errors
+     */
     public static String makeGetRequest(String url, HttpSession session) throws Exception {
         try {
             LOGGER.info("Making GET request to: " + url);
 
-            // Get or create CookieManager for this session
             java.net.CookieManager cookieManager = getCookieManager(session);
             HttpClient httpClient = HttpClient.newBuilder()
                     .connectTimeout(TIMEOUT)
@@ -114,6 +134,12 @@ public class ApiController {
         }
     }
 
+    /**
+     * Gets or creates a CookieManager for the current session.
+     *
+     * @param session the HTTP session to store the CookieManager
+     * @return the CookieManager instance for the session
+     */
     private static java.net.CookieManager getCookieManager(HttpSession session) {
         java.net.CookieManager cookieManager = (java.net.CookieManager) session.getAttribute(SESSION_COOKIE_MANAGER);
         if (cookieManager == null) {
@@ -123,6 +149,15 @@ public class ApiController {
         return cookieManager;
     }
 
+    /**
+     * Makes a PATCH request to the specified URL with JSON payload and session management.
+     *
+     * @param url the target URL for the PATCH request
+     * @param jsonPayload the JSON payload to send in the request body
+     * @param session the HTTP session for maintaining cookies and authentication
+     * @return the response body as a string
+     * @throws Exception if there are network issues or server errors
+     */
     public static String makePatchRequest(String url, String jsonPayload, HttpSession session) throws Exception {
         try {
             LOGGER.info("Making PATCH request to: " + url);
